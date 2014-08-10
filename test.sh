@@ -8,5 +8,6 @@ if [ $( hash fr.full.gba ) == "98adc1ddc82847df2e1da236456a71bb" ]; then
 	echo "ok"
 else
 	echo checksum fails
+	cmp fr.full.gba FR.ro.gba
 fi
 

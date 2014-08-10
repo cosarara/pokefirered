@@ -11,7 +11,7 @@ all: fr.full.gba
 %.gba : %.elf
 	arm-none-eabi-objcopy -O binary $< $@
 
-fr.full.s: fr.gba fr.s
+fr.full.s: fr.gba fr.s put_end.sh
 	rm -f fr.full.s
 	cp fr.s fr.full.s
 	./put_end.sh fr.gba fr.full.s
