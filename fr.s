@@ -1,5 +1,6 @@
 
 // t_ means the function is thumb (pretty much always I see)
+// All this will be split in smaller files once we know what each thing is
 
 .text
 .globl _start
@@ -436,7 +437,46 @@ pop	{r4}
 pop	{r0}
 bx	r0
 
-.incbin "FR.ro.gba",0xb8c,0x57754
+.incbin "FR.ro.gba",0xb8c,0x8440
+
+t_8fcc:
+// msgbox-related
+push	{r4, r5, lr}
+add	r4, r0, #0
+add	r5, r1, #0
+t_8fd2: // <-- re-entry
+ldrb	r2, [r5, #0]
+add	r5, #1
+add	r0, r2, #0
+sub	r0, #250	// 0xfa
+cmp	r0, #5
+bhi	t_90a6
+lsl	r0, r0, #2
+ldr	r1, [pc, #4]	// [$08008fe8] (=$08008fec)
+add	r0, r0, r1
+ldr	r0, [r0, #0]
+mov	pc, r0
+// At first, r0 is t_90a6, then changes to t_90ac where there
+// is a proper return
+
+.word 0x08008fec
+
+.incbin "FR.ro.gba",0x8fec,0xba
+
+t_90a6:
+strb	r2, [r4, #0]
+add	r4, #1
+b	t_8fd2
+
+t_90ac:
+movs	r0, #255	// 0xff
+strb	r0, [r4, #0]
+add	r0, r4, #0
+pop	{r4, r5}
+pop	{r1}
+bx	r1
+
+.incbin "FR.ro.gba",0x90b8,0x4f228
 
 // 0x582e0
 t_582e0:
