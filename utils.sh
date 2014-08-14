@@ -15,4 +15,8 @@ function sub {
 	python -c "print(hex($1 - $2))"
 }
 
+function dis_t_around {
+	dis_t_ $1 $2 $(( $2 + 50 ))
+}
+
 
