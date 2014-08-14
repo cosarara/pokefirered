@@ -87,24 +87,25 @@ cmp	r0, #0
 // Changing this to a b doesn't seem to do anything?
 bne	tmain_label1
 
+// 426
 ldrh	r1, [r7, #40]	// 0x28
 movs	r0, #1
 and	r0, r1
 cmp	r0, #0
 beq	tmain_label1
 
-// We come here every time we press A
+// We come here every time we press A - 430
 movs	r0, #14
 and	r0, r1
 cmp	r0, #14
 bne	tmain_label1
 
-// We never pass through here, it seems
+// We never pass through here, it seems - 438
 bl	0x81e09d4
 bl	0x81e08f8
 bl	0x80008d8
 
-tmain_label1:
+tmain_label1: // 444
 bl	t_582e0 // Doesn't seem essential
 cmp	r0, #1
 bne	t_478 // exit 1 - used like all the time
@@ -131,7 +132,7 @@ t_478:
 ldr	r5, [pc, #48]	// (0x4ac) 0x030030e4
 movs	r0, #0
 strb	r0, [r5, #0]
-bl	0x80004b0 // White screen withou this; important
+bl	t_4b0 // White screen withou this; important
 // We can actually b tmain_reentry here (+nop) - game too fast though
 bl	0x8058274 // Game seems to do fine without this
 add	r4, r0, #0
@@ -141,7 +142,7 @@ movs	r0, #0
 strh	r0, [r7, #46]	// 0x2e
 bl	0x8007350 // Game seems to do fine without this
 strb	r4, [r5, #0]
-bl	0x80004b0 // Game seems to do fine without this
+bl	t_4b0 // Game seems to do fine without this here
 mov	r2, r8
 strb	r2, [r5, #0]
 
@@ -162,7 +163,7 @@ bl	0x800b178 // Game doesn't break without this
 lsl	r0, r0, #24
 cmp	r0, #0
 bne	t_4b0_earylyret // Blank screen if it's made a b
-bl	0x8000510 // This one is needed - blank screen else
+bl	t_510 // This one is needed - blank screen else
 t_4b0_earylyret: // 0x80004c0
 pop	{r0}
 bx	r0
@@ -170,24 +171,25 @@ bx	r0
 // 080004c4
 t_4c4:
 push	{r4, lr}
-ldr	r0, [pc, #44]	// (0x4f4)
+ldr	r0, [pc, #44]	// [$080004f4] (=$030030f0)
 movs	r4, #0
 str	r4, [r0, #32]
 str	r4, [r0, #36]	// 0x24
 str	r4, [r0, #0]
-ldr	r0, [pc, #36]	// (0x4f8)
+ldr	r0, [pc, #36]	// [$080004f8] (=$080ec821) // set state to copyright message
 bl	t_544
-ldr	r0, [pc, #36]	// (0x4fc)
-ldr	r1, [pc, #36]	// (0x500)
+// 4d6
+ldr	r0, [pc, #36]	// [$080004fc] (=$0300500c)
+ldr	r1, [pc, #36]	// [$08000500] (=$02024588)
 str	r1, [r0, #0]
-ldr	r2, [pc, #36]	// (0x504)
-ldr	r0, [pc, #40]	// (0x508)
+ldr	r2, [pc, #36]	// [$08000504] (=$03005008)
+ldr	r0, [pc, #40]	// [$08000508] (=$0202552c)
 str	r0, [r2, #0]
 movs	r0, #242	// 0xf2
 lsl	r0, r0, #4
 add	r1, r1, r0
 str	r4, [r1, #0]
-ldr	r0, [pc, #32]	// (0x50c)
+ldr	r0, [pc, #32]	// [$0800050c] (=$03005e88)
 strb	r4, [r0, #0]
 pop	{r4}
 pop	{r0}
@@ -195,8 +197,11 @@ bx	r0
 
 .incbin "FR.ro.gba",0x4f4,0x1c
 
+// Gamemodes:
+// 080ec820 - Copyright
+
 t_510:
-// Screen-related
+// Change gamestate
 	push	{r4, lr}
 	bl	0x80f5118 // Not essential
 	cmp	r0, #0
@@ -206,12 +211,12 @@ t_510:
 	cmp	r0, #0
 	bne	t_510_earlyret
 	ldr	r4, [pc, #24]	// [$08000540] (=$030030f0)
-	ldr	r0, [r4, #0] // Oh my, a callback
+	ldr	r0, [r4, #0] // First gamestate register
 	cmp	r0, #0
 	beq	t_510_jumpover // Essential
-	bl	0x81e3ba8 // Not essential
+	bl	0x81e3ba8 // Not essential - bx r0
 t_510_jumpover: // 0x530
-	ldr	r0, [r4, #4]
+	ldr	r0, [r4, #4] // 030030f4 (Second gamestate register)
 	cmp	r0, #0
 	beq	t_510_earlyret
 	bl	0x81e3ba8 // Essential - just bx r0 (080ec820 thumb in the tested case)
@@ -224,8 +229,8 @@ t_510_earlyret: // 0x53a
 
 // 544
 t_544:
-ldr	r1, [pc, #12]	// (0x554)
-str	r0, [r1, #4]
+ldr	r1, [pc, #12]	// [$08000554] (=$030030f0)
+str	r0, [r1, #4] // <-- here we set the game state
 movs	r0, #135	// 0x87
 lsl	r0, r0, #3
 add	r1, r1, r0
@@ -348,7 +353,7 @@ ldr	r0, [r0, #8]
 ldr	r0, [pc, #64]	// [$080006ec] (=$03007ffc)
 str	r4, [r0, #0]
 movs	r0, #0
-bl	0x80006f4 // writes r0 to 030030fc
+bl	t_6f4 // writes r0 to 030030fc
 movs	r0, #0 // Not needed
 bl	0x8000700 // writes r0 to 03003100
 movs	r0, #0 // Not needed
@@ -362,8 +367,16 @@ pop	{r4, r5}
 pop	{r0}
 bx	r0
 
+.incbin "FR.ro.gba",0x6d2,0x22
 
-.incbin "FR.ro.gba",0x6d2,0x296
+t_6f4:
+// Stores r0 in 030030fc
+ldr	r1, [pc, #4]	// [$080006fc] (=$030030f0)
+str	r0, [r1, #12]
+bx	lr
+.hword 0000
+.word 0x030030f0
+.incbin "FR.ro.gba",0x700,0x268
 
 // 08000968
 t_968:
@@ -520,11 +533,10 @@ lsl	r1, r1, #3
 add	r5, r0, r1
 ldrb	r4, [r5, #0]
 cmp	r4, #140	// 0x8c
-bne	0x80ec640 // Essential, could be made b
+bne	t_ec640 // Essential, could be made b
 b	0x80ec778
 
 
-// Now this starts to become a fucking mess
 t_ec640:
 cmp	r4, #140	// 0x8c
 bgt	t_ec650 // If removed it loops at the copyright screen
@@ -541,9 +553,119 @@ cmp	r4, #141	// 0x8d
 bne	0x80ec656 // Also loop on first screen
 b	0x80ec7a4 // Doesn't seem needed
 
-.incbin "FR.ro.gba",0xec656,0x1ca
+// Now this starts to become a fucking mess
+t_ec656:
+cmp	r4, #142	// 0x8e
+bne	0x80ec65c
+b	0x80ec808
+b	0x80ec732
 
-// 80ec820
+t_ec65e:
+// Oh my god
+// This works even if all the calls marked as NE are replaced by
+// nops, so no idea what they do.
+// There is one of them which makes the star yellow in the titlescreen
+movs	r0, #0
+bl	t_6f4 // NE
+movs	r0, #80	// 0x50
+movs	r1, #0
+bl	0x8000a38 // NE
+movs	r0, #82	// 0x52
+movs	r1, #0
+bl	0x8000a38 // NE
+movs	r0, #84	// 0x54
+movs	r1, #0
+bl	0x8000a38 // NE
+movs	r1, #160	// 0xa0
+lsl	r1, r1, #19
+ldr	r2, [pc, #200]	// (0xec74c)
+add	r0, r2, #0
+strh	r0, [r1, #0]
+movs	r0, #0
+movs	r1, #0
+bl	0x8000a38 // NE
+movs	r0, #16
+movs	r1, #0
+bl	0x8000a38 // NE
+movs	r0, #18
+movs	r1, #0
+bl	0x8000a38 // NE
+add	r0, sp, #4
+strh	r4, [r0, #0]
+ldr	r1, [pc, #172]	// (0xec750)
+str	r0, [r1, #0]
+movs	r0, #192	// 0xc0
+lsl	r0, r0, #19
+str	r0, [r1, #4]
+ldr	r0, [pc, #164]	// (0xec754)
+str	r0, [r1, #8]
+ldr	r0, [r1, #8]
+str	r4, [sp, #8]
+add	r0, sp, #8
+str	r0, [r1, #0]
+movs	r0, #224	// 0xe0
+lsl	r0, r0, #19
+str	r0, [r1, #4]
+ldr	r0, [pc, #152]	// (0xec758)
+str	r0, [r1, #8]
+ldr	r0, [r1, #8]
+add	r0, sp, #4
+strh	r4, [r0, #0]
+str	r0, [r1, #0]
+ldr	r0, [pc, #144]	// (0xec75c)
+str	r0, [r1, #4]
+ldr	r0, [pc, #144]	// (0xec760)
+str	r0, [r1, #8]
+ldr	r0, [r1, #8]
+bl	0x8070528 // NE
+movs	r1, #224	// 0xe0
+lsl	r1, r1, #6
+movs	r0, #0
+movs	r2, #0
+bl	0x80ec5d4 // NE
+bl	0x8087e64 // NE
+bl	0x80773bc // NE
+bl	0x8006b10 // NE
+bl	0x80088f0 // NE - star appears black without it
+movs	r0, #1
+neg	r0, r0
+ldr	r1, [pc, #104]	// (0xec764)
+str	r1, [sp, #0]
+movs	r1, #0
+movs	r2, #16
+movs	r3, #0
+bl	0x8070588 // NE
+movs	r1, #224	// 0xe0
+lsl	r1, r1, #3
+movs	r0, #8
+bl	0x8000a38 // NE
+movs	r0, #1
+bl	0x8000b68 // NE
+ldr	r0, [pc, #80]	// (0xec768)
+bl	t_6f4 // Essential
+movs	r1, #160	// 0xa0
+lsl	r1, r1, #1
+movs	r0, #0
+bl	0x8000a38 // NE
+ldr	r0, [pc, #68]	// (0xec76c)
+bl	0x8000718 // NE
+ldr	r0, [pc, #64]	// (0xec770)
+bl	0x81dbe5c // NE
+bl	0x80704d0 // NE
+ldr	r0, [pc, #60]	// (0xec774)
+movs	r1, #135	// 0x87
+lsl	r1, r1, #3
+add	r0, r0, r1
+ldrb	r1, [r0, #0]
+add	r1, #1
+strb	r1, [r0, #0]
+ldr	r0, [pc, #40]	// (0xec770)
+bl	0x81dbd48 // NE
+b	0x80ec812
+
+.incbin "FR.ro.gba",0xec74c,0xd4
+
+// 80ec820 -- copyright gamestate?
 t_ec820:
 push	{lr}
 bl	t_ec62c // Essential
