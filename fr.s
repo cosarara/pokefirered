@@ -11,7 +11,7 @@ b 0x08000204
 header:
 .incbin "FR.ro.gba",4,0x200
 
-real_start:
+real_start: // 204
 mov	r0, #0x12
 msr	CPSR_fc, r0 // No idea what this means
 ldr	sp, [pc, #40]	// 0x23c
@@ -112,7 +112,7 @@ bne	t_478 // exit 1 - used like all the time
 
 // Is this really needed? Game works with b up here ^
 strb	r0, [r6, #0]
-bl	0x80004b0
+bl	t_4b0
 movs	r0, #0
 strb	r0, [r6, #0]
 b	t_49e // exit 2 - only used once, later 49e is called
@@ -137,7 +137,7 @@ bl	t_4b0 // White screen withou this; important
 bl	0x8058274 // Game seems to do fine without this
 add	r4, r0, #0
 cmp	r4, #1
-bne	t_49e // White screen withou this; important
+bne	t_49e // We could actually call tmain_reentry here (game too fast tho)
 movs	r0, #0
 strh	r0, [r7, #46]	// 0x2e
 bl	0x8007350 // Game seems to do fine without this
@@ -211,12 +211,12 @@ t_510:
 	cmp	r0, #0
 	bne	t_510_earlyret
 	ldr	r4, [pc, #24]	// [$08000540] (=$030030f0)
-	ldr	r0, [r4, #0] // First gamestate register
+	ldr	r0, [r4, #0] // Callback which is always 0 ;P
 	cmp	r0, #0
 	beq	t_510_jumpover // Essential
 	bl	0x81e3ba8 // Not essential - bx r0
 t_510_jumpover: // 0x530
-	ldr	r0, [r4, #4] // 030030f4 (Second gamestate register)
+	ldr	r0, [r4, #4] // 030030f4 (gamestate register)
 	cmp	r0, #0
 	beq	t_510_earlyret
 	bl	0x81e3ba8 // Essential - just bx r0 (080ec820 thumb in the tested case)
@@ -230,7 +230,7 @@ t_510_earlyret: // 0x53a
 // 544
 t_544:
 ldr	r1, [pc, #12]	// [$08000554] (=$030030f0)
-str	r0, [r1, #4] // <-- here we set the game state
+str	r0, [r1, #4] // <-- here we set the gamestate
 movs	r0, #135	// 0x87
 lsl	r0, r0, #3
 add	r1, r1, r0
@@ -290,16 +290,19 @@ bx	lr
 // 5e8
 t_check_input:
 push	{lr}
+// Key input register
 ldr	r0, [pc, #56]	// [$08000624] (=$04000130)
 ldrh	r1, [r0, #0]
+// last 6 bits not used, XOR with 0x3ff (AND would be ok as well, but 0 means pressed)
 ldr	r2, [pc, #56]	// [$08000628] (=$000003ff)
 add	r0, r2, #0
 add	r3, r0, #0
 eor	r3, r1
+
 ldr	r1, [pc, #52]	// [$0800062c] (=$030030f0)
 ldrh	r2, [r1, #40]	// 0x28
 add	r0, r3, #0
-bic	r0, r2
+bic	r0, r2 // bit clear - rN = rN && ~rM
 strh	r0, [r1, #42]	// 0x2a
 strh	r0, [r1, #46]	// 0x2e
 strh	r0, [r1, #48]	// 0x30
@@ -318,12 +321,16 @@ bne	0x800063a
 strh	r3, [r2, #48]	// 0x30
 ldr	r0, [pc, #16]	// (0x630)
 b	0x8000636
+.hword 0000
+.word 0x04000130
+.word 0x000003ff
+.word 0x030030f0
 
-.incbin "FR.ro.gba",0x622,0x66
+.incbin "FR.ro.gba",0x630,0x58
 
 t_688:
 /* Copies 13 (14?) bytes from 081e9f28 to 03003540
-Also, makes a DMA transfer:
+Also, sets up a DMA transfer:
 040000d4 = 08000248 - DMA 3 src
 040000d8 = 03003580 - DMA 3 dst
 040000dc = 84000200 - DMA 3 Word Count
@@ -353,9 +360,9 @@ ldr	r0, [r0, #8]
 ldr	r0, [pc, #64]	// [$080006ec] (=$03007ffc)
 str	r4, [r0, #0]
 movs	r0, #0
-bl	t_6f4 // writes r0 to 030030fc
+bl	r0_in_30fc // writes r0 to 030030fc
 movs	r0, #0 // Not needed
-bl	0x8000700 // writes r0 to 03003100
+bl	t_700 // writes r0 to 03003100
 movs	r0, #0 // Not needed
 bl	0x8000718 // writes r0 to 03003108
 ldr	r1, [pc, #44]	// [$080006f0] (=$04000208)
@@ -369,14 +376,48 @@ bx	r0
 
 .incbin "FR.ro.gba",0x6d2,0x22
 
-t_6f4:
+// 80006f4
+r0_in_30fc:
 // Stores r0 in 030030fc
 ldr	r1, [pc, #4]	// [$080006fc] (=$030030f0)
-str	r0, [r1, #12]
+str	r0, [r1, #0xc]
 bx	lr
 .hword 0000
 .word 0x030030f0
-.incbin "FR.ro.gba",0x700,0x268
+
+t_700:
+ldr	r1, [pc, #4]	// (0x708)
+str	r0, [r1, #0x10]
+bx	lr
+.hword 0000
+.word 0x030030f0
+
+t_70c:
+ldr	r1, [pc, #4]	// (0x714)
+str	r0, [r1, #0x14]
+bx	lr
+.hword 0000
+.word 0x030030f0
+
+t_718:
+ldr	r1, [pc, #4]	// (0x720)
+str	r0, [r1, #0x18]
+bx	lr
+.hword 0000
+.word 0x030030f0
+
+t_724:
+push	{r4, r5, lr}
+ldr	r0, [pc, #12]	// (0x734)
+ldrb	r0, [r0, #0]
+cmp	r0, #0
+beq	0x8000738
+bl	0x80fba38
+b	0x8000744
+
+.word 0x03003f3c
+
+.incbin "FR.ro.gba",0x738,0x230
 
 // 08000968
 t_968:
@@ -450,7 +491,77 @@ pop	{r4}
 pop	{r0}
 bx	r0
 
-.incbin "FR.ro.gba",0xb8c,0x8440
+.incbin "FR.ro.gba",0xb8c,0x6794
+
+t_7320:
+// Copy 0x400 bytes from 03003128 to 07000000 (OAM)
+push	{lr}
+ldr	r2, [pc, #32]	// [$08007344] (=$030030f0)
+ldr	r1, [pc, #32]	// [$08007348] (=$00000439)
+add	r0, r2, r1 // [03003529]
+ldrb	r1, [r0, #0]
+movs	r0, #1
+and	r0, r1
+cmp	r0, #0 // If ([03003529] & 1) != 0: return
+bne	t_7340 // early ret
+add	r0, r2, #0
+add	r0, #56	// 0x38;  =03003128
+movs	r1, #224	// 0xe0
+lsl	r1, r1, #19 // = 07000000
+ldr	r2, [pc, #16]	// (0x734c)
+// r0 source, r1 dest, r2 options: wc 0x100, datasize 32bit
+bl	0x81e3b64 // SWI 11 - CpuSet
+t_7340:
+pop	{r0}
+bx	r0
+.word 0x030030f0
+.word 0x439
+.word 0x04000100 // not the timer, swi 0bh options
+
+.incbin "FR.ro.gba",0x7350,0x2c0
+
+t_7610:
+push	{r4, r5, r6, r7, lr}
+ldr	r0, [pc, #76]	// [$08007660] (=$02021840)
+ldrb	r0, [r0, #0]
+cmp	r0, #0
+beq	t_7658 // Can be b
+movs	r4, #0
+ldr	r1, [pc, #68]	// (0x7664)
+ldrb	r0, [r1, #0]
+cmp	r0, #0
+beq	0x8007652
+ldr	r6, [pc, #64]	// (0x7668)
+add	r7, r6, #4
+add	r5, r1, #0
+lsl	r1, r4, #1
+add	r1, r1, r4
+lsl	r1, r1, #2
+add	r2, r1, r6
+ldr	r0, [r2, #0]
+add	r1, r1, r7
+ldr	r1, [r1, #0]
+ldrh	r2, [r2, #8]
+lsr	r2, r2, #1
+bl	0x81e3b64
+ldrb	r1, [r5, #0]
+sub	r1, #1
+strb	r1, [r5, #0]
+add	r0, r4, #1
+lsl	r0, r0, #24
+lsr	r4, r0, #24
+lsl	r1, r1, #24
+cmp	r1, #0
+bne	0x800762a
+ldr	r1, [pc, #12]	// (0x7660)
+movs	r0, #0
+strb	r0, [r1, #0]
+t_7658:
+pop	{r4, r5, r6, r7}
+pop	{r0}
+bx	r0
+
+.incbin "FR.ro.gba",0x765e,0x196e
 
 t_8fcc:
 // msgbox-related
@@ -519,46 +630,163 @@ lsr	r5, r0, #32
 movs	r0, #1
 pop	{r1}
 bx	r1
-// 58316
 
+.incbin "FR.ro.gba",0x58316,0x1815e
 
-.incbin "FR.ro.gba",0x58316,0x94316
+t_70474:
+push	{r4, r5, lr}
+ldr	r4, [pc, #68]	// [$080704bc] (=$02037ab8)
+ldrb	r1, [r4, #8]
+movs	r5, #128	// 0x80
+add	r0, r5, #0
+and	r0, r1
+lsl	r0, r0, #24
+lsr	r3, r0, #24
+cmp	r3, #0
+bne	t_704b6 // NE, can't be b
+ldr	r1, [pc, #52]	// [$080704c0] (=$020375f8)
+movs	r2, #160	// 0xa0
+lsl	r2, r2, #19
+// DMA
+ldr	r0, [pc, #52]	// [$080704c4] (=$040000d4)
+// SRC =020375f8
+str	r1, [r0, #0]
+// DEST =05000000
+str	r2, [r0, #4]
+ldr	r1, [pc, #48]	// [$080704c8] (=$80000200)
+// WC
+str	r1, [r0, #8]
+ldr	r0, [r0, #8]
+ldr	r0, [pc, #48]	// [$080704cc] (=$02037ac8)
+str	r3, [r0, #0]
+ldrb	r1, [r4, #9]
+movs	r0, #3
+and	r0, r1
+cmp	r0, #2
+bne	t_704b6 // Can be b, can be nop, NE
+ldrb	r1, [r4, #7]
+add	r0, r5, #0
+and	r0, r1
+cmp	r0, #0
+beq	t_704b6 // Can be b, can be nop, NE
+bl	0x807141c // NE
+t_704b6:
+pop	{r4, r5}
+pop	{r0}
+bx	r0
+
+.incbin "FR.ro.gba",0x704bc,0x14
+
+t_704d0:
+push	{lr}
+ldr	r0, [pc, #12]	// (0x704e0)
+ldr	r0, [r0, #0]
+cmp	r0, #0
+beq	t_704e4
+movs	r0, #255	// 0xff
+b	0x807051c
+.hword 0000
+.word 0x02037ac8
+
+t_704e4:
+ldr	r0, [pc, #16]	// (0x704f8)
+ldrb	r0, [r0, #9]
+movs	r1, #3
+and	r1, r0
+cmp	r1, #0
+bne	t_704fc
+bl	0x8070b8c
+b	t_7050a
+.hword 0000
+.word 0x02037ab8
+
+t_704fc:
+cmp	r1, #1
+bne	t_70506
+bl	0x8070eec
+b	t_7050a
+
+t_70506:
+bl	0x8071300
+
+t_7050a:
+lsl	r0, r0, #24
+lsr	r3, r0, #24
+ldr	r2, [pc, #16]	// (0x70520)
+ldr	r0, [pc, #16]	// (0x70524)
+ldr	r0, [r0, #0]
+movs	r1, #0
+orr	r0, r1
+str	r0, [r2, #0]
+add	r0, r3, #0
+pop	{r1}
+bx	r1
+.word 0x02037ac8
+.word 0x02037ab8
+
+.incbin "FR.ro.gba",0x70528,0x7c07c
+
+t_ec5a4: // ec5a5
+push	{lr}
+bl	0x8007320 // Copy shit to OAM
+bl	0x8007610 // Not too important
+bl	0x8070474 // Palettes
+pop	{r0}
+bx	r0
+
+.hword 0000
+
+t_ec5b8:
+push	{lr}
+bl	0x80704d0
+lsl	r0, r0, #24
+cmp	r0, #0
+bne	t_ec5ca_earlyret
+ldr	r0, [pc, #8]	// (0xec5d0)
+bl	t_544
+t_ec5ca_earlyret:
+pop	{r0}
+bx	r0
+.hword 0000
+.word 0x080ec871
+
+.incbin "FR.ro.gba",0xec5d4,0x58
 
 t_ec62c:
 push	{r4, r5, r6, lr}
 sub	sp, #12
-ldr	r0, [pc, #24]	// (0xec64c)
+ldr	r0, [pc, #24]	// [$080ec64c] (=$030030f0)
 movs	r1, #135	// 0x87
 lsl	r1, r1, #3
-add	r5, r0, r1
-ldrb	r4, [r5, #0]
+add	r5, r0, r1 // r5 will be 03003528
+ldrb	r4, [r5, #0] // The loop index, goes up
 cmp	r4, #140	// 0x8c
 bne	t_ec640 // Essential, could be made b
 b	0x80ec778
-
 
 t_ec640:
 cmp	r4, #140	// 0x8c
 bgt	t_ec650 // If removed it loops at the copyright screen
 cmp	r4, #0
-beq	0x80ec65e // Blank screen if removed
+beq	t_ec65e // Blank screen if removed
 b	0x80ec732 // Working without this
-//movs	r0, r0
-.hword 0000 // gas would assemble it as an add r0, r0, #0
-add	r0, #240	// 0xf0
-lsl	r0, r0, #12
+.hword 0000 // just alignment I think
+.word 0x030030f0
 
 t_ec650:
 cmp	r4, #141	// 0x8d
-bne	0x80ec656 // Also loop on first screen
-b	0x80ec7a4 // Doesn't seem needed
+bne	t_ec656 // Also loop on first screen
+b	0x80ec7a4 // Doesn't seem to be needed
 
 // Now this starts to become a fucking mess
 t_ec656:
 cmp	r4, #142	// 0x8e
-bne	0x80ec65c
-b	0x80ec808
-b	0x80ec732
+bne	t_ec65c // loops if it's made b, not needed
+// Exit point
+b	0x80ec808 // @ ec65a
+
+t_ec65c:
+b	0x80ec732 // @ ec65c
 
 t_ec65e:
 // Oh my god
@@ -566,7 +794,7 @@ t_ec65e:
 // nops, so no idea what they do.
 // There is one of them which makes the star yellow in the titlescreen
 movs	r0, #0
-bl	t_6f4 // NE
+bl	r0_in_30fc // NE
 movs	r0, #80	// 0x50
 movs	r1, #0
 bl	0x8000a38 // NE
@@ -578,7 +806,7 @@ movs	r1, #0
 bl	0x8000a38 // NE
 movs	r1, #160	// 0xa0
 lsl	r1, r1, #19
-ldr	r2, [pc, #200]	// (0xec74c)
+ldr	r2, [pc, #200]	// [$080ec74c] (=$00007fff)
 add	r0, r2, #0
 strh	r0, [r1, #0]
 movs	r0, #0
@@ -592,12 +820,13 @@ movs	r1, #0
 bl	0x8000a38 // NE
 add	r0, sp, #4
 strh	r4, [r0, #0]
-ldr	r1, [pc, #172]	// (0xec750)
+//DMA
+ldr	r1, [pc, #172]	// [$080ec750] (=$040000d4)
 str	r0, [r1, #0]
 movs	r0, #192	// 0xc0
 lsl	r0, r0, #19
 str	r0, [r1, #4]
-ldr	r0, [pc, #164]	// (0xec754)
+ldr	r0, [pc, #164]	// [$080ec754] (=$8100c000)
 str	r0, [r1, #8]
 ldr	r0, [r1, #8]
 str	r4, [sp, #8]
@@ -606,15 +835,15 @@ str	r0, [r1, #0]
 movs	r0, #224	// 0xe0
 lsl	r0, r0, #19
 str	r0, [r1, #4]
-ldr	r0, [pc, #152]	// (0xec758)
+ldr	r0, [pc, #152]	// [$080ec758] (=$85000100)
 str	r0, [r1, #8]
 ldr	r0, [r1, #8]
 add	r0, sp, #4
 strh	r4, [r0, #0]
 str	r0, [r1, #0]
-ldr	r0, [pc, #144]	// (0xec75c)
+ldr	r0, [pc, #144]	// [$080ec75c] (=$05000002)
 str	r0, [r1, #4]
-ldr	r0, [pc, #144]	// (0xec760)
+ldr	r0, [pc, #144]	// [$080ec760] (=$810001ff)
 str	r0, [r1, #8]
 ldr	r0, [r1, #8]
 bl	0x8070528 // NE
@@ -629,7 +858,7 @@ bl	0x8006b10 // NE
 bl	0x80088f0 // NE - star appears black without it
 movs	r0, #1
 neg	r0, r0
-ldr	r1, [pc, #104]	// (0xec764)
+ldr	r1, [pc, #104]	// [$080ec764] (=$0000ffff)
 str	r1, [sp, #0]
 movs	r1, #0
 movs	r2, #16
@@ -641,31 +870,67 @@ movs	r0, #8
 bl	0x8000a38 // NE
 movs	r0, #1
 bl	0x8000b68 // NE
-ldr	r0, [pc, #80]	// (0xec768)
-bl	t_6f4 // Essential
+ldr	r0, [pc, #80]	// [$080ec768] (=$080ec5a5)
+bl	r0_in_30fc // Essential
 movs	r1, #160	// 0xa0
 lsl	r1, r1, #1
 movs	r0, #0
 bl	0x8000a38 // NE
-ldr	r0, [pc, #68]	// (0xec76c)
+ldr	r0, [pc, #68]	// [$080ec76c] (=$080ec61d)
 bl	0x8000718 // NE
-ldr	r0, [pc, #64]	// (0xec770)
-bl	0x81dbe5c // NE
+ldr	r0, [pc, #64]	// [$080ec770] (=$0203aad4)
+bl	0x81dbe5c // NE - this one is long
 bl	0x80704d0 // NE
-ldr	r0, [pc, #60]	// (0xec774)
+ldr	r0, [pc, #60]	// [$080ec774] (=$030030f0)
 movs	r1, #135	// 0x87
 lsl	r1, r1, #3
 add	r0, r0, r1
 ldrb	r1, [r0, #0]
 add	r1, #1
 strb	r1, [r0, #0]
-ldr	r0, [pc, #40]	// (0xec770)
+ldr	r0, [pc, #40]	// [$080ec770] (=$0203aad4)
 bl	0x81dbd48 // NE
-b	0x80ec812
+b	t_ec812
 
-.incbin "FR.ro.gba",0xec74c,0xd4
+.word 0x7fff
+.word 0x040000d4
+.word 0x8100c000
+.word 0x85000100
+.word 0x05000002
+.word 0x810001ff
+.word 0xffff
+.word 0x080ec5a5
+.word 0x080ec61d
+.word 0x0203aad4
+.word 0x030030f0
+
+.incbin "FR.ro.gba",0xec778,0x90
+
+t_ec808: // Set next gamestate
+bl	0x800b388
+ldr	r0, [pc, #12]	// (0xec81c) =0x080ec5b9
+bl	t_544
+
+t_ec812:
+movs	r0, #1
+add	sp, #12
+pop	{r4, r5, r6}
+pop	{r1}
+bx	r1
+.word 0x080ec5b9
 
 // 80ec820 -- copyright gamestate?
+
+// This is called through a callback, and follows like this:
+// ec820 -> ec62c -> ec640 -> ec650 -> ec656 -> ec65c
+//              \         \                  -> ec808 -- ec812
+//               -(opt)-----> ec65e ----------------------^
+// It loops 140 (0x8c) times and then exits through ec650->ec808
+// The real stuff is done in ec65e - although the only
+// really important call in there just sets a callback to 080ec5a5
+// in 030030fc
+// The stack subtracted 12 in 62c and fixed in ec812
+
 t_ec820:
 push	{lr}
 bl	t_ec62c // Essential
