@@ -19,4 +19,8 @@ function dis_t_around {
 	dis_t_ $1 $2 $(( $2 + 50 ))
 }
 
+ROM=FR.ro.gba
+alias around="dis_t_around $ROM"
+alias dis="dis_t_ $ROM"
+alias cdis="dis_t $ROM"
 
