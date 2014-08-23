@@ -4,6 +4,7 @@
 
 .text
 .globl _start
+.arm
 
 _start:
 b 0x08000204
@@ -631,7 +632,41 @@ movs	r0, #1
 pop	{r1}
 bx	r1
 
-.incbin "FR.ro.gba",0x58316,0x1815e
+.incbin "FR.ro.gba",0x58316,0x180d6
+
+t_703ec:
+// Copies from a source to 0x020371f8 and 0x020375f8
+// Takes: r0 source, r1 offset?, r2 wc*2?
+// This function does weird shit shifting regs aound...
+push	{r4, r5, r6, lr}
+add	r6, r0, #0
+add	r4, r1, #0
+add	r5, r2, #0
+lsl	r4, r4, #16
+lsl	r5, r5, #16
+lsr	r4, r4, #15
+ldr	r1, [pc, #32]	// (0x7041c) 0x020371f8
+add	r1, r4, r1
+lsr	r5, r5, #17
+add	r2, r5, #0
+// Copy 0x10 halfwords from R00=08402260 to R01=020371f8
+bl	0x81e3b64 // SWI 0B
+ldr	r0, [pc, #24]	// (0x70420) 0x020375f8
+add	r4, r4, r0
+add	r0, r6, #0
+add	r1, r4, #0
+add	r2, r5, #0
+// Copy 0x10 halfwords from R00=08402260 to R01=020375f8
+bl	0x81e3b64 // SWI 0B
+pop	{r4, r5, r6}
+pop	{r0}
+bx	r0
+
+.hword 0000
+.word 0x020371f8
+.word 0x020375f8
+
+.incbin "FR.ro.gba",0x70424,0x50
 
 t_70474:
 push	{r4, r5, lr}
@@ -684,7 +719,7 @@ ldr	r0, [r0, #0]
 cmp	r0, #0
 beq	t_704e4
 movs	r0, #255	// 0xff
-b	0x807051c
+b	t_7051c_earlyret
 .hword 0000
 .word 0x02037ac8
 
@@ -719,6 +754,7 @@ movs	r1, #0
 orr	r0, r1
 str	r0, [r2, #0]
 add	r0, r3, #0
+t_7051c_earlyret:
 pop	{r1}
 bx	r1
 .word 0x02037ac8
@@ -736,9 +772,10 @@ bx	r0
 
 .hword 0000
 
+// 2nd gamestate
 t_ec5b8:
 push	{lr}
-bl	0x80704d0
+bl	t_704d0 // more or less essential - r0 must be set to 0
 lsl	r0, r0, #24
 cmp	r0, #0
 bne	t_ec5ca_earlyret
@@ -750,7 +787,41 @@ bx	r0
 .hword 0000
 .word 0x080ec871
 
-.incbin "FR.ro.gba",0xec5d4,0x58
+t_ec5d4:
+push	{r4, r5, r6, lr}
+// I wish I knew what this is supposed to achieve
+add	r3, r0, #0
+add	r4, r1, #0
+add	r5, r2, #0
+lsl	r3, r3, #16
+lsr	r3, r3, #16
+lsl	r4, r4, #16
+lsr	r4, r4, #16
+lsl	r5, r5, #16
+lsr	r5, r5, #16
+ldr	r0, [pc, #36]	// (0xec610) 0x08402280
+movs	r6, #192	// 0xc0
+lsl	r6, r6, #19 // r6 = 0x6000000, VRAM
+add	r3, r3, r6 // r3 and r1 as well cos why not
+add	r1, r3, #0
+bl	t_swi_12
+ldr	r0, [pc, #28]	// (0xec614) 0x084024e4
+// r1 = r4 = 06003800
+add	r4, r4, r6
+add	r1, r4, #0
+bl	t_swi_12
+ldr	r0, [pc, #20]	// (0xec618) 0x08402260
+add	r1, r5, #0
+movs	r2, #32
+bl	t_703ec
+pop	{r4, r5, r6}
+pop	{r0}
+bx	r0
+.word 0x08402280 // Copyright compressed graphic
+.word 0x084024e4 // The tilemap, I guess
+.word 0x08402260
+
+.incbin "FR.ro.gba",0xec61c,0x10
 
 t_ec62c:
 push	{r4, r5, r6, lr}
@@ -851,7 +922,7 @@ movs	r1, #224	// 0xe0
 lsl	r1, r1, #6
 movs	r0, #0
 movs	r2, #0
-bl	0x80ec5d4 // NE
+bl	0x80ec5d4 // Draws the copyright screen
 bl	0x8087e64 // NE
 bl	0x80773bc // NE
 bl	0x8006b10 // NE
@@ -917,7 +988,7 @@ add	sp, #12
 pop	{r4, r5, r6}
 pop	{r1}
 bx	r1
-.word 0x080ec5b9
+.word 0x080ec5b9 // ec5b8 thumb
 
 // 80ec820 -- copyright gamestate?
 
@@ -961,7 +1032,231 @@ bx	r0
 .word 0x030053a0 // ec85c
 .word 0x0300500c // ec860
 
-.incbin "FR.ro.gba",0xec864,0xf731c
+.incbin "FR.ro.gba",0xec864,0xc
+
+t_ec870: // 3rd gamestate
+push	{r4, lr}
+sub	sp, #12
+ldr	r0, [pc, #20]	// (0xec88c)
+movs	r1, #135	// 0x87
+lsl	r1, r1, #3
+add	r0, r0, r1
+ldrb	r4, [r0, #0]
+cmp	r4, #1
+beq	0x80ec944
+cmp	r4, #1
+bgt	0x80ec890
+cmp	r4, #0
+beq	0x80ec8a0
+b	0x80ec894
+.word 0x030030f0
+
+t_ec890:
+cmp	r4, #2
+beq	0x80ec988
+ldr	r0, [pc, #144]	// (0xec928)
+movs	r1, #135	// 0x87
+lsl	r1, r1, #3
+add	r0, r0, r1
+movs	r1, #0
+strb	r1, [r0, #0]
+movs	r0, #0
+bl	0x80006f4
+movs	r0, #0
+movs	r1, #0
+bl	0x8000a38
+ldr	r0, [pc, #124]	// (0xec92c)
+movs	r1, #224	// 0xe0
+lsl	r1, r1, #9
+bl	0x8002b80
+bl	0x80773bc
+bl	0x8006b10
+bl	0x8070528
+bl	0x80f6808
+bl	0x80eca00
+add	r1, sp, #4
+movs	r0, #0
+strh	r0, [r1, #0]
+ldr	r1, [pc, #92]	// (0xec930)
+add	r0, sp, #4
+str	r0, [r1, #0]
+movs	r0, #192	// 0xc0
+lsl	r0, r0, #19
+str	r0, [r1, #4]
+ldr	r0, [pc, #84]	// (0xec934)
+str	r0, [r1, #8]
+ldr	r0, [r1, #8]
+movs	r2, #0
+str	r2, [sp, #8]
+add	r0, sp, #8
+str	r0, [r1, #0]
+movs	r0, #224	// 0xe0
+lsl	r0, r0, #19
+str	r0, [r1, #4]
+ldr	r0, [pc, #68]	// (0xec938)
+str	r0, [r1, #8]
+ldr	r0, [r1, #8]
+add	r0, sp, #4
+strh	r2, [r0, #0]
+str	r0, [r1, #0]
+movs	r0, #160	// 0xa0
+lsl	r0, r0, #19
+str	r0, [r1, #4]
+ldr	r0, [pc, #52]	// (0xec93c)
+str	r0, [r1, #8]
+ldr	r0, [r1, #8]
+movs	r2, #128	// 0x80
+lsl	r2, r2, #3
+movs	r0, #0
+movs	r1, #0
+bl	0x8070424
+movs	r0, #0
+bl	0x8001618
+ldr	r1, [pc, #32]	// (0xec940)
+movs	r0, #0
+movs	r2, #2
+bl	0x8001658
+b	0x80ec9b8
+.word 0x30030f0
+.word 0x2000000
+.word 0x40000d4
+.word 0x8100c000
+.word 0x85000100
+.word 0x81000200
+.word 0x840bb80
+
+t_ec944:
+ldr	r0, [pc, #48]	// (0xec978)
+movs	r1, #0
+movs	r2, #32
+bl	0x80703ec
+ldr	r1, [pc, #44]	// (0xec97c)
+movs	r0, #0
+str	r0, [sp, #0]
+movs	r0, #3
+movs	r2, #0
+movs	r3, #0
+bl	0x80f6878
+ldr	r1, [pc, #32]	// (0xec980)
+str	r4, [sp, #0]
+movs	r0, #3
+movs	r2, #0
+movs	r3, #0
+bl	0x80f6878
+ldr	r0, [pc, #20]	// (0xec984)
+movs	r1, #208	// 0xd0
+movs	r2, #32
+bl	0x80703ec
+b	0x80ec9b8
+.word 0x8402630
+.word 0x8402650
+.word 0x8402668
+.word 0x840270c
+
+t_ec988:
+bl	0x80f682c
+lsl	r0, r0, #24
+cmp	r0, #0
+bne	0x80ec9c6
+bl	0x80eca70
+movs	r0, #1
+neg	r0, r0
+movs	r1, #16
+movs	r2, #0
+bl	0x80714d4
+ldr	r0, [pc, #12]	// (0xec9b0)
+bl	t_544
+ldr	r0, [pc, #8]	// (0xec9b4)
+bl	0x80006f4
+b	0x80ec9c6
+
+.word 0x80ec9d5 // Next gamestate (4th)
+.word 0x80ec9ed
+
+t_ec9b8:
+ldr	r1, [pc, #20]	// (0xec9d0)
+movs	r0, #135	// 0x87
+lsl	r0, r0, #3
+add	r1, r1, r0
+ldrb	r0, [r1, #0]
+add	r0, #1
+strb	r0, [r1, #0]
+add	sp, #12
+pop	{r4}
+pop	{r0}
+bx	r0
+
+.hword 0000
+.word 0x030030f0
+
+t_ec9d4: // 4th gamestate
+push	{lr}
+bl	0x8077578
+bl	0x8006b5c
+bl	0x8006ba8
+bl	0x80704d0
+pop	{r0}
+bx	r0
+
+.hword 0000
+
+t_ec9ec:
+push	{lr}
+bl	0x8007320
+bl	0x8007610
+bl	0x8070474
+pop	{r0}
+bx	r0
+
+.incbin "FR.ro.gba",0xec9fe,0xf715a
+
+t_swi_0A:
+// 1e3b58
+swi 0xA // ArcTan2
+bx lr
+
+t_swi_0E:
+// 1e3b5c
+swi 0xE // BgAffineSet
+bx lr
+
+t_swi_0C:
+// 1e3b60
+swi 0xC // CpuFastSet
+bx lr
+
+t_swi_0B:
+// 1e3b64
+swi 0xB // CpuSet
+bx lr
+
+t_swi_06:
+// 1e3b68
+swi 6 // HALT
+bx lr
+
+t_swi_12:
+// 1e3b6c
+swi 0x12 // LZ77UnCompVram
+bx lr
+
+t_swi_11:
+// 1e3b6e
+swi 0x11 // LZ77UnCompVram
+bx lr
+
+t_swi_25:
+// 1e3b70
+movs r1, #1 // 16bit, MultiPlay mode (default, slow, up to three slaves)
+swi 0x25 // MultiBoot
+bx lr
+
+.hword 0000
+
+t_swi_0F:
+// 1e3b7c
+swi 0xF // ObjAffineSet
+bx lr
 
 t_swi_1:
 // 0x1e3b80
