@@ -135,6 +135,7 @@ movs	r0, #0
 strb	r0, [r5, #0]
 bl	t_4b0 // White screen withou this; important
 // We can actually b tmain_reentry here (+nop) - game too fast though
+//b tmain_reentry
 bl	0x8058274 // Game seems to do fine without this
 add	r4, r0, #0
 cmp	r4, #1
@@ -710,7 +711,11 @@ pop	{r4, r5}
 pop	{r0}
 bx	r0
 
-.incbin "FR.ro.gba",0x704bc,0x14
+.word 0x2037ab8
+.word 0x20375f8
+.word 0x40000d4
+.word 0x80000200
+.word 0x2037ac8
 
 t_704d0:
 push	{lr}
@@ -760,7 +765,190 @@ bx	r1
 .word 0x02037ac8
 .word 0x02037ab8
 
-.incbin "FR.ro.gba",0x70528,0x7c07c
+.incbin "FR.ro.gba",0x70528,0x7050
+
+t_77578:
+push	{r4, r5, lr}
+bl	t_775a8
+lsl	r0, r0, #24
+lsr	r0, r0, #24
+cmp	r0, #16
+beq	t_7759c // return
+ldr	r5, [pc, #28]	// (0x775a4)
+lsl	r4, r0, #2
+add	r4, r4, r0
+lsl	r4, r4, #3
+add	r4, r4, r5
+ldr	r1, [r4, #0] // Read 03005090
+bl	0x81e3bac // bx r1
+ldrb	r0, [r4, #6]
+cmp	r0, #255	// 0xff
+bne	0x8077588
+t_7759c:
+pop	{r4, r5}
+pop	{r0}
+bx	r0
+.hword 0000
+.word 0x3005090
+
+t_775a8:
+push	{lr}
+movs	r2, #0
+ldr	r0, [pc, #48]	// (0x775e0)
+ldrb	r1, [r0, #4]
+add	r3, r0, #0
+cmp	r1, #1
+bne	t_775bc
+ldrb	r0, [r3, #5]
+cmp	r0, #254	// 0xfe
+beq	t_775da
+// loop
+t_775bc:
+add	r0, r2, #1
+lsl	r0, r0, #24
+lsr	r2, r0, #24
+cmp	r2, #15
+bhi	t_775da // Return
+lsl	r0, r2, #2
+add	r0, r0, r2
+lsl	r0, r0, #3
+add	r1, r0, r3
+ldrb	r0, [r1, #4]
+cmp	r0, #1
+bne	t_775bc
+ldrb	r0, [r1, #5]
+cmp	r0, #254	// 0xfe
+bne	t_775bc
+t_775da:
+add	r0, r2, #0
+pop	{r1}
+bx	r1
+
+.word 0x3005090
+
+.incbin "FR.ro.gba",0x775e4,0x1330
+
+t_78914: // 78915 5th gamestate
+push	{r4, r5, r6, lr}
+sub	sp, #12
+ldr	r0, [pc, #20]	// (0x78930)
+movs	r1, #135	// 0x87
+lsl	r1, r1, #3
+add	r0, r0, r1
+ldrb	r6, [r0, #0]
+cmp	r6, #1
+beq	0x80789f0
+cmp	r6, #1
+bgt	t_78934
+cmp	r6, #0
+beq	0x8078946
+b	0x807893a
+.word 0x30030f0
+
+t_78934:
+cmp	r6, #2
+bne	0x807893a
+b	0x8078ac0 // exit
+ldr	r0, [pc, #148]	// (0x789d0)
+movs	r1, #135	// 0x87
+lsl	r1, r1, #3
+add	r0, r0, r1
+movs	r1, #0
+strb	r1, [r0, #0]
+movs	r0, #0
+bl	0x80006f4
+bl	0x8000558
+ldr	r0, [pc, #128]	// (0x789d4)
+movs	r1, #224	// 0xe0
+lsl	r1, r1, #9
+bl	0x8002b80
+bl	0x80773bc
+bl	0x8006b10
+bl	0x80088f0
+bl	0x8070528
+bl	0x8078b34
+add	r1, sp, #4
+movs	r0, #0
+strh	r0, [r1, #0]
+ldr	r1, [pc, #96]	// (0x789d8)
+add	r0, sp, #4
+str	r0, [r1, #0]
+movs	r0, #192	// 0xc0
+lsl	r0, r0, #19
+str	r0, [r1, #4]
+ldr	r0, [pc, #88]	// (0x789dc)
+str	r0, [r1, #8]
+ldr	r0, [r1, #8]
+movs	r2, #0
+str	r2, [sp, #8]
+add	r0, sp, #8
+str	r0, [r1, #0]
+movs	r0, #224	// 0xe0
+lsl	r0, r0, #19
+str	r0, [r1, #4]
+ldr	r0, [pc, #72]	// (0x789e0)
+str	r0, [r1, #8]
+ldr	r0, [r1, #8]
+add	r0, sp, #4
+strh	r2, [r0, #0]
+str	r0, [r1, #0]
+movs	r0, #160	// 0xa0
+lsl	r0, r0, #19
+str	r0, [r1, #4]
+ldr	r0, [pc, #60]	// (0x789e4)
+str	r0, [r1, #8]
+ldr	r0, [r1, #8]
+movs	r0, #0
+bl	0x8001618
+ldr	r1, [pc, #52]	// (0x789e8)
+movs	r0, #0
+movs	r2, #4
+bl	0x8001658
+movs	r1, #130	// 0x82
+lsl	r1, r1, #5
+movs	r0, #0
+bl	0x8000af4
+ldr	r1, [pc, #36]	// (0x789ec)
+movs	r0, #255	// 0xff
+strb	r0, [r1, #0]
+b	0x8078b18
+
+.incbin "FR.ro.gba",0x789ce,0xf2
+
+t_78ac0:
+bl	0x80f682c
+lsl	r0, r0, #24
+cmp	r0, #0
+bne	0x8078b26
+ldr	r0, [pc, #52]	// (0x8078b00)
+movs	r1, #16
+movs	r2, #0
+bl	0x80714d4
+ldr	r0, [pc, #44]	// (0x8078b04)
+movs	r1, #4
+bl	0x807741c
+ldr	r0, [pc, #40]	// (0x8078b08)
+movs	r1, #2
+bl	0x807741c
+ldr	r1, [pc, #36]	// (0x78b0c)
+strb	r0, [r1, #0]
+ldr	r0, [pc, #36]	// (0x78b10)
+bl	0x80006f4
+ldr	r0, [pc, #36]	// (0x78b14)
+bl	t_544
+movs	r0, #139	// 0x8b
+lsl	r0, r0, #1
+bl	0x81dd0f4
+b	0x8078b26
+.hword 0
+.word 0xffff
+.word 0x8078c25
+.word 0x8078bed
+.word 0x2037f30
+.word 0x8078bb5
+.word 0x8078b9d // next gamestate
+
+.incbin "FR.ro.gba",0x78b18,0x73a8c
 
 t_ec5a4: // ec5a5
 push	{lr}
@@ -779,7 +967,7 @@ bl	t_704d0 // more or less essential - r0 must be set to 0
 lsl	r0, r0, #24
 cmp	r0, #0
 bne	t_ec5ca_earlyret
-ldr	r0, [pc, #8]	// (0xec5d0)
+ldr	r0, [pc, #8]	// (0xec5d0) next gamestate
 bl	t_544
 t_ec5ca_earlyret:
 pop	{r0}
@@ -951,7 +1139,7 @@ ldr	r0, [pc, #68]	// [$080ec76c] (=$080ec61d)
 bl	0x8000718 // NE
 ldr	r0, [pc, #64]	// [$080ec770] (=$0203aad4)
 bl	0x81dbe5c // NE - this one is long
-bl	0x80704d0 // NE
+bl	t_704d0 // NE
 ldr	r0, [pc, #60]	// [$080ec774] (=$030030f0)
 movs	r1, #135	// 0x87
 lsl	r1, r1, #3
@@ -1045,7 +1233,7 @@ ldrb	r4, [r0, #0]
 cmp	r4, #1
 beq	0x80ec944
 cmp	r4, #1
-bgt	0x80ec890
+bgt	t_ec890 // exit
 cmp	r4, #0
 beq	0x80ec8a0
 b	0x80ec894
@@ -1053,7 +1241,7 @@ b	0x80ec894
 
 t_ec890:
 cmp	r4, #2
-beq	0x80ec988
+beq	t_ec988
 ldr	r0, [pc, #144]	// (0xec928)
 movs	r1, #135	// 0x87
 lsl	r1, r1, #3
@@ -1158,7 +1346,7 @@ bl	0x80f682c
 lsl	r0, r0, #24
 cmp	r0, #0
 bne	0x80ec9c6
-bl	0x80eca70
+bl	t_eca70 // Sets a callback
 movs	r0, #1
 neg	r0, r0
 movs	r1, #16
@@ -1191,10 +1379,18 @@ bx	r0
 
 t_ec9d4: // 4th gamestate
 push	{lr}
-bl	0x8077578
+// black screen if not done
+bl	t_77578
+
+// drawing the star, and making little stars disappear
 bl	0x8006b5c
+
+// needed for all stars
 bl	0x8006ba8
-bl	0x80704d0
+
+// In this case, needed for animation after title
+bl	t_704d0
+
 pop	{r0}
 bx	r0
 
@@ -1208,7 +1404,624 @@ bl	0x8070474
 pop	{r0}
 bx	r0
 
-.incbin "FR.ro.gba",0xec9fe,0xf715a
+.incbin "FR.ro.gba",0xec9fe,0x72
+
+t_eca70:
+push	{r4, lr}
+ldr	r0, [pc, #40]	// (0xeca9c)
+bl	0x8002b9c
+add	r4, r0, #0
+ldr	r1, [pc, #36]	// (0xecaa0)
+bl	0x80ecaa8
+ldr	r0, [pc, #32]	// (0xecaa4)
+movs	r1, #3
+bl	0x807741c // !!
+strb	r0, [r4, #5]
+ldrb	r0, [r4, #5]
+movs	r1, #0
+add	r2, r4, #0
+bl	0x80776e8
+pop	{r4}
+pop	{r0}
+bx	r0
+
+.hword 0000
+.word 0x28bc
+.word 0x80ecaf1 // callback
+.word 0x80ecab1 // will be written to 03005090 and called later
+
+.incbin "FR.ro.gba",0xecaa8,0x8
+
+t_ecab0: // ecab1
+// calls callbacks
+push	{r4, lr}
+lsl	r0, r0, #24
+lsr	r0, r0, #24
+movs	r1, #0
+bl	0x8077720 // Essential
+add	r4, r0, #0 // r4 is now 02000010
+ldr	r0, [pc, #40]	// (0xecae8)
+ldrh	r1, [r0, #46]	// 0x2e
+movs	r0, #13
+and	r0, r1
+cmp	r0, #0
+beq	t_ecad8
+ldr	r0, [r4, #0]
+ldr	r1, [pc, #28]	// (0xecaec)
+cmp	r0, r1
+beq	t_ecad8
+add	r0, r4, #0
+bl	0x80ecaa8 // Not essential
+t_ecad8:
+ldr	r1, [r4, #0] // ecaf1 is in 2000010
+add	r0, r4, #0
+bl	0x81e3bac // bx r1
+pop	{r4}
+pop	{r0}
+bx	r0
+.hword 0000
+.word 0x30030f0
+.word 0x80edbe9
+
+t_ecaf0:
+push	{r4, r5, lr}
+sub	sp, #12
+add	r5, r0, #0
+ldrb	r0, [r5, #4]
+cmp	r0, #0
+beq	0x80ecb02
+cmp	r0, #1
+beq	0x80ecb78 // exit
+b	0x80ecb8a
+
+.incbin "FR.ro.gba",0xecb02,0x76
+
+t_ecb78:
+bl	0x8001960
+lsl	r0, r0, #24
+cmp	r0, #0
+bne	0x80ecb8a
+ldr	r1, [pc, #16]	// (0xecb94)
+add	r0, r5, #0
+bl	0x80ecaa8 // write to r5
+add	sp, #12
+pop	{r4, r5}
+pop	{r0}
+bx	r0
+.hword 0
+.word 0x80ecb99 // callback, exit
+
+t_ecb98:
+push	{r4, r5, lr}
+add	r4, r0, #0
+ldrb	r5, [r4, #4]
+cmp	r5, #1
+beq	0x80ecbe2
+cmp	r5, #1
+bgt	0x80ecbac // exit
+cmp	r5, #0
+beq	0x80ecbb2
+b	0x80ecc32
+
+t_ecbac:
+cmp	r5, #2
+beq	0x80ecbfc // exit
+b	0x80ecc32
+
+t_ecbb2:
+movs	r1, #128	// 0x80
+lsl	r1, r1, #7
+movs	r0, #0
+bl	0x8000af4
+movs	r1, #252	// 0xfc
+lsl	r1, r1, #6
+movs	r0, #72	// 0x48
+bl	0x8000a38
+movs	r0, #74	// 0x4a
+movs	r1, #0
+bl	0x8000a38
+movs	r0, #66	// 0x42
+movs	r1, #240	// 0xf0
+bl	0x8000a38
+movs	r0, #70	// 0x46
+movs	r1, #0
+bl	0x8000a38
+strh	r5, [r4, #18]
+b	0x80ecbf4
+movs	r0, #3
+bl	0x80019bc
+movs	r0, #1
+neg	r0, r0
+movs	r1, #0
+movs	r2, #0
+bl	0x80714d4
+ldrb	r0, [r4, #4]
+add	r0, #1
+strb	r0, [r4, #4]
+b	0x80ecc32
+
+t_ecbfc:
+ldrh	r0, [r4, #18]
+add	r0, #8
+strh	r0, [r4, #18]
+lsl	r0, r0, #16
+lsr	r0, r0, #16
+cmp	r0, #47	// 0x2f
+bls	0x80ecc0e
+movs	r0, #48	// 0x30
+strh	r0, [r4, #18]
+ldrh	r0, [r4, #18]
+movs	r1, #80	// 0x50
+sub	r1, r1, r0
+lsl	r1, r1, #8
+add	r0, #80	// 0x50
+orr	r1, r0
+lsl	r1, r1, #16
+lsr	r1, r1, #16
+movs	r0, #70	// 0x46
+bl	0x8000a38
+ldrh	r0, [r4, #18]
+cmp	r0, #48	// 0x30
+bne	0x80ecc32
+ldr	r1, [pc, #12]	// (0xecc38)
+add	r0, r4, #0
+bl	0x80ecaa8
+pop	{r4, r5}
+pop	{r0}
+bx	r0
+
+.word 0x80ecc3d // callback, exit
+
+t_ecc3c:
+push	{r4, r5, lr}
+add	r4, r0, #0
+ldrb	r5, [r4, #4]
+cmp	r5, #1
+beq	0x80ecc68
+cmp	r5, #1
+bgt	0x80ecc50 // exit
+cmp	r5, #0
+beq	0x80ecc56
+b	0x80ecc9c
+
+t_ecc50:
+cmp	r5, #2
+beq	0x80ecc86 // exit
+b	0x80ecc9c
+
+t_ecc56:
+ldr	r0, [pc, #12]	// (0xecc64)
+bl	0x80722cc
+bl	0x80edc40
+strh	r5, [r4, #18]
+b	0x80ecc7e
+
+.word 0x141
+
+t_ecc68:
+ldrh	r0, [r4, #18]
+add	r0, #1
+strh	r0, [r4, #18]
+lsl	r0, r0, #16
+lsr	r0, r0, #16
+cmp	r0, #30
+bne	0x80ecc9c
+bl	0x80eddf0
+movs	r0, #0
+strh	r0, [r4, #18]
+ldrb	r0, [r4, #4]
+add	r0, #1
+strb	r0, [r4, #4]
+b	0x80ecc9c
+
+t_ecc86:
+ldrh	r0, [r4, #18]
+add	r0, #1
+strh	r0, [r4, #18]
+lsl	r0, r0, #16
+lsr	r0, r0, #16
+cmp	r0, #90	// 0x5a
+bne	0x80ecc9c
+ldr	r1, [pc, #12]	// (0xecca4)
+add	r0, r4, #0
+bl	0x80ecaa8
+pop	{r4, r5}
+pop	{r0}
+bx	r0
+
+.hword 0000
+.word 0x80ecca9 // callback, exit
+
+t_ecca8:
+push	{r4, r5, lr}
+sub	sp, #8
+add	r4, r0, #0
+ldrb	r0, [r4, #4]
+cmp	r0, #5
+bhi	0x80ecd54
+lsl	r0, r0, #2
+ldr	r1, [pc, #8]	// (0xeccc0)
+add	r0, r0, r1
+ldr	r0, [r0, #0]
+mov	pc, r0
+
+// Will jump to:
+// eccdc first time
+// then many times to 080ecce6
+// then 080eccf6
+// 080ecd18
+// 080ecd20 many times
+// 080ecd3e many times
+// (until game freak animation ends)
+
+.hword 0000
+.word 0x80eccc4
+.word 0x80eccdc
+
+.incbin "FR.ro.gba",0xeccc8,0x14
+
+t_eccdc:
+bl	0x80eded8
+movs	r0, #0
+strh	r0, [r4, #18]
+b	0x80ecd36
+
+.incbin "FR.ro.gba",0xecce6,0x58
+
+t_ecd3e:
+ldrh	r0, [r4, #18]
+add	r0, #1
+strh	r0, [r4, #18]
+lsl	r0, r0, #16
+lsr	r0, r0, #16
+cmp	r0, #50	// 0x32
+bls	0x80ecd54
+ldr	r1, [pc, #12]	// (0xecd5c)
+add	r0, r4, #0
+bl	0x80ecaa8
+add	sp, #8
+pop	{r4, r5}
+pop	{r0}
+bx	r0
+.word 0x80ecd61 // callback, exit
+
+t_ecd60:
+push	{r4, r5, r6, lr}
+sub	sp, #8
+add	r6, r0, #0
+ldrb	r0, [r6, #4]
+cmp	r0, #7
+bls	0x80ecd6e // exit
+b	0x80ece96
+
+t_ecd6e:
+lsl	r0, r0, #2
+ldr	r1, [pc, #4]	// (0xecd78)
+add	r0, r0, r1
+ldr	r0, [r0, #0]
+mov	pc, r0
+.word 0x80ecd7c
+// first 080ecd9c
+// then 080ecdc4
+// 080ecdcc many times while logo fades in
+// 080ece10
+// 080ece26 many times to wait
+// 080ece52 many times to fade out
+// 080ece64
+// 080ece78 many times (0x15 times?)
+// (exit there)
+
+.incbin "FR.ro.gba",0xecd7c,0xfc
+
+t_ece78:
+ldrh	r0, [r6, #18]
+add	r0, #1
+strh	r0, [r6, #18]
+lsl	r0, r0, #16
+lsr	r0, r0, #16
+cmp	r0, #20
+bls	0x80ece96
+movs	r0, #80	// 0x50
+movs	r1, #0
+bl	0x8000a38
+ldr	r1, [pc, #16]	// (0xecea0)
+add	r0, r6, #0
+bl	0x80ecaa8
+add	sp, #8
+pop	{r4, r5, r6}
+pop	{r0}
+bx	r0
+.hword 0000
+.word 0x080ecea5 // callback, exit
+
+t_ecea4: // ecea5
+push	{r4, r5, lr}
+sub	sp, #4
+add	r5, r0, #0
+ldrb	r0, [r5, #4]
+cmp	r0, #5
+bls	0x80eceb2 // exit
+b	0x80ed094
+
+t_eceb2: // 1st animation after game freak
+lsl	r0, r0, #2
+ldr	r1, [pc, #4]	// (0xecebc)
+add	r0, r0, r1
+ldr	r0, [r0, #0]
+mov	pc, r0
+.word 0x80ecec0
+.word 0x80eced8
+.word 0x80ecf64
+.word 0x80ecfa4
+.word 0x80ecfd8 // many times
+.word 0x80ed000 // many times
+.word 0x80ed064 // never?
+
+.incbin "FR.ro.gba",0xeced8,0x128
+
+t_ed000:
+ldrh	r0, [r5, #18]
+add	r0, #1
+strh	r0, [r5, #18]
+lsl	r0, r0, #16
+lsr	r0, r0, #16
+cmp	r0, #20
+bne	t_ed01a
+ldr	r0, [pc, #68]	// (0x80ed054)
+movs	r1, #0
+bl	0x807741c
+bl	0x80ed118
+
+t_ed01a:
+ldrh	r0, [r5, #18]
+cmp	r0, #29
+bls	0x80ed094
+movs	r0, #2
+neg	r0, r0
+ldr	r2, [pc, #48]	// (0x80ed058)
+movs	r1, #16
+bl	0x80714d4
+ldr	r0, [pc, #44]	// (0x80ed05c)
+bl	0x8077688
+lsl	r0, r0, #24
+lsr	r0, r0, #24
+bl	0x8077508
+ldr	r0, [pc, #24]	// (0x80ed054)
+bl	0x8077688
+lsl	r0, r0, #24
+lsr	r0, r0, #24
+bl	0x8077508
+ldr	r1, [pc, #20]	// (0x80ed060)
+add	r0, r5, #0
+bl	0x80ecaa8
+b	0x80ed094
+
+.hword 0
+.word 0x80ed141
+.word 0x7fff
+.word 0x80ed0ad
+.word 0x80ed189 // callback, exit
+
+.incbin "FR.ro.gba",0xed064,0x124
+
+t_ed188: // first part of battle scene
+push	{r4, r5, r6, r7, lr}
+mov	r7, r8
+push	{r7}
+sub	sp, #4
+add	r7, r0, #0
+ldrb	r0, [r7, #4]
+cmp	r0, #6
+bls	0x80ed19a
+b	0x80ed3f6
+lsl	r0, r0, #2
+ldr	r1, [pc, #4]	// (0xed1a4)
+add	r0, r0, r1
+ldr	r0, [r0, #0]
+mov	pc, r0 // 1a2
+
+.word 0x80ed1a8
+.word 0x80ed1c4
+.word 0x80ed214
+.word 0x80ed32c
+.word 0x80ed350 // many times, fade in
+.word 0x80ed360 // many, keep moving
+.word 0x80ed3bc // load close up scene, but withut hiding the small sprites
+.word 0x80ed3d2 // many, hide small sprites, then parallax camera effect
+
+.incbin "FR.ro.gba",0xed1c4,0x20e
+
+t_ed3d2:
+ldrh	r0, [r7, #18]
+add	r0, #1
+strh	r0, [r7, #18]
+lsl	r0, r0, #16
+lsr	r0, r0, #16
+cmp	r0, #59	// 0x3b
+bls	0x80ed3f6
+ldr	r0, [pc, #32]	// (0x80ed404)
+bl	0x8077688
+lsl	r0, r0, #24
+lsr	r0, r0, #24
+bl	0x8077508
+ldr	r1, [pc, #24]	// (0x80ed408)
+add	r0, r7, #0
+bl	0x80ecaa8
+add	sp, #4
+pop	{r3}
+mov	r8, r3
+pop	{r4, r5, r6, r7}
+pop	{r0}
+bx	r0
+.hword 0
+.word 0x80ed429
+.word 0x80ed4c1 // callback, exit
+
+.incbin "FR.ro.gba",0xed40c,0xb4
+
+t_ed4c0:
+push	{r4, r5, lr}
+sub	sp, #4
+add	r5, r0, #0
+ldrb	r4, [r5, #4]
+cmp	r4, #1
+beq	0x80ed59c
+cmp	r4, #1
+bgt	0x80ed4d6
+cmp	r4, #0
+beq	0x80ed4e4
+b	0x80ed68a
+
+t_ed4d6:
+cmp	r4, #2
+bne	0x80ed4dc
+b	0x80ed5fc
+
+t_ed4dc:
+cmp	r4, #3
+bne	0x80ed4e2
+b	0x80ed658
+
+.incbin "FR.ro.gba",0xed4e2,0x176
+
+t_ed658:
+ldrh	r0, [r5, #18]
+add	r0, #1
+strh	r0, [r5, #18]
+lsl	r0, r0, #16
+lsr	r0, r0, #16
+cmp	r0, #16
+bne	0x80ed66c
+add	r0, r5, #0
+bl	0x80ed7d4
+add	r0, r5, #0
+bl	0x80ee5c8
+cmp	r0, #0
+bne	0x80ed68a
+ldr	r0, [pc, #28]	// (0x80ed694)
+bl	0x8077650
+lsl	r0, r0, #24
+cmp	r0, #0
+bne	0x80ed68a
+ldr	r1, [pc, #20]	// (0x80ed698)
+add	r0, r5, #0
+bl	0x80ecaa8
+add	sp, #4
+pop	{r4, r5}
+pop	{r0}
+bx	r0
+.hword 0
+.word 0x80ee201
+.word 0x80ed899 // callback, exit
+
+.incbin "FR.ro.gba",0xed69c,0x1fc
+
+t_ed898: // ed899
+// Second part of intro battle (the awesome part)
+push	{r4, r5, lr}
+sub	sp, #8
+add	r4, r0, #0
+ldrb	r0, [r4, #4]
+cmp	r0, #15
+bls	0x80ed8a6
+b	0x80eda98
+lsl	r0, r0, #2
+ldr	r1, [pc, #4]	// (0x80ed8b0)
+add	r0, r0, r1
+ldr	r0, [r0, #0]
+mov	pc, r0
+
+.word 0x80ed8b4
+.word 0x80ed8f4
+.word 0x80ed8f8 // many, parallax
+.word 0x80ed910 // many, nidowhatever sprite animation
+.word 0x80ed918 // many, nido calms down and more parallax
+.word 0x80ed936 // many, gengar raises hand and backpedals
+.word 0x80ed946 // many, gengar attacks, nido dodges
+.word 0x80ed95e // many, more parallax
+.word 0x80ed97c // many, nido jumps
+.word 0x80ed998 // many, nido jumps back
+.word 0x80ed9a0 // many, moar parallax
+.word 0x80ed9ba
+.word 0x80ed9d2
+.word 0x80ed9dc // many, even more parallax scroll, then nido jumps with white bg fade out
+.word 0x80eda1c // many, zoom
+.word 0x80eda5c // zoom and black fade out
+.word 0x80eda7c // many in black screen, exit
+
+.incbin "FR.ro.gba",0xed8f4,0x188
+
+t_eda7c:
+ldrh	r0, [r4, #18]
+add	r0, #1
+strh	r0, [r4, #18]
+lsl	r0, r0, #16
+lsr	r0, r0, #16
+cmp	r0, #60	// 0x3c
+bls	0x80edac4
+ldr	r1, [pc, #8]	// (0xeda94)
+add	r0, r4, #0
+bl	0x80ecaa8
+b	0x80edac4
+.word 0x80edbe9 // callback, exit
+
+.incbin "FR.ro.gba",0xeda98,0x150
+
+t_edbe8:
+	push	{r4, lr}
+	add	r4, r0, #0
+	ldrb	r0, [r4, #4]
+	cmp	r0, #0
+	beq	t_edbf8
+	cmp	r0, #1
+	beq	t_edc0c
+	b	t_edc34
+t_edbf8:
+	movs	r2, #128	// 0x8080
+	lsl	r2, r2, #3
+	movs	r0, #0
+	movs	r1, #0
+	bl	0x8070424
+	ldrb	r0, [r4, #4]
+	add	r0, #1
+	strb	r0, [r4, #4]
+	b	t_edc34
+t_edc0c:
+	bl	0x80f682c
+	lsl	r0, r0, #24
+	cmp	r0, #0
+	bne	t_edc34
+	ldrb	r0, [r4, #5]
+	bl	0x8077508
+	add	r0, r4, #0
+	bl	0x8002bc4
+	movs	r0, #2
+	bl	0x8000b94
+	movs	r0, #0
+	bl	0x8000700
+	ldr	r0, [pc, #12]	// (0xedc3c)
+	bl	t_544 // change gamestate
+t_edc34:
+pop	{r4}
+pop	{r0}
+bx	r0
+
+.hword 0
+.word 0x8078915 // 5th gamestate
+
+.incbin "FR.ro.gba",0xedc40,0x40ed0
+
+t_tutorial_and_intro: // 0812eb10 0812eb11
+push	{lr}
+bl	t_77578 // Black screen if not here
+bl	0x8002de8 // Prof. will not speak else
+bl	0x8006b5c // Pokeball stays else
+bl	0x8006ba8 // No pokemon out of pokeball else
+bl	0x80704d0 // Black screen else
+pop	{r0}
+bx	r0
+
+.incbin "FR.ro.gba",0x12eb2a,0xb502e
 
 t_swi_0A:
 // 1e3b58
